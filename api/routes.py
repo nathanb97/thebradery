@@ -6,20 +6,8 @@ from sqlalchemy.orm import Session
 
 from .dependencies import get_db
 from database.models import Product
-from .schemas import (
-    ProductResponse, 
-    SearchRequest, 
-    SearchResponse, 
-    VendorResponse, 
-    ProductTypeResponse
-)
-from .services import (
-    search_products, 
-    get_product_by_id, 
-    get_vendors, 
-    get_product_types,
-    get_catalog_stats
-)
+from .schemas import ProductResponse, SearchRequest, SearchResponse, VendorResponse, ProductTypeResponse
+from .services import search_products, get_product_by_id, get_vendors, get_product_types, get_catalog_stats
 
 router = APIRouter()
 
@@ -57,7 +45,7 @@ async def search_products_endpoint(
     sort_order: str = Query("asc", description="Sort order (asc/desc)"),
     limit: int = Query(20, ge=1, le=100, description="Results per page"),
     offset: int = Query(0, ge=0, description="Results to skip"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Search products with filters and pagination."""
     try:
@@ -72,20 +60,17 @@ async def search_products_endpoint(
             sort_by=sort_by,
             sort_order=sort_order,
             limit=limit,
-            offset=offset
+            offset=offset,
         )
-        
+
         # Execute search
         products, page_info = search_products(db, search_request)
-        
+
         # Convert to response format
         product_responses = [ProductResponse.model_validate(product) for product in products]
-        
-        return SearchResponse(
-            products=product_responses,
-            page_info=page_info
-        )
-        
+
+        return SearchResponse(products=product_responses, page_info=page_info)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
 
@@ -97,9 +82,9 @@ async def get_product(product_id: int, db: Session = Depends(get_db)):
         product = get_product_by_id(db, product_id)
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
-        
+
         return ProductResponse.model_validate(product)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -112,7 +97,7 @@ async def get_vendors_endpoint(db: Session = Depends(get_db)):
     try:
         vendors = get_vendors(db)
         return [VendorResponse(**vendor) for vendor in vendors]
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving vendors: {str(e)}")
 
@@ -123,7 +108,7 @@ async def get_product_types_endpoint(db: Session = Depends(get_db)):
     try:
         types = get_product_types(db)
         return [ProductTypeResponse(**product_type) for product_type in types]
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving product types: {str(e)}")
 
@@ -133,33 +118,18 @@ async def search_examples():
     """Examples of search queries."""
     return {
         "examples": [
-            {
-                "description": "Search for 'dress' products",
-                "url": "/api/v1/products/search?query=dress"
-            },
-            {
-                "description": "Filter by specific vendor",
-                "url": "/api/v1/products/search?vendors=CHANEL&vendors=DIOR"
-            },
-            {
-                "description": "Price range filter",
-                "url": "/api/v1/products/search?price_min=100&price_max=500"
-            },
-            {
-                "description": "Products with descriptions only",
-                "url": "/api/v1/products/search?has_description=true"
-            },
+            {"description": "Search for 'dress' products", "url": "/api/v1/products/search?query=dress"},
+            {"description": "Filter by specific vendor", "url": "/api/v1/products/search?vendors=CHANEL&vendors=DIOR"},
+            {"description": "Price range filter", "url": "/api/v1/products/search?price_min=100&price_max=500"},
+            {"description": "Products with descriptions only", "url": "/api/v1/products/search?has_description=true"},
             {
                 "description": "Sorted by price descending",
-                "url": "/api/v1/products/search?sort_by=gross_amount_exc_tax_product&sort_order=desc"
+                "url": "/api/v1/products/search?sort_by=gross_amount_exc_tax_product&sort_order=desc",
             },
-            {
-                "description": "Pagination",
-                "url": "/api/v1/products/search?limit=50&offset=100"
-            },
+            {"description": "Pagination", "url": "/api/v1/products/search?limit=50&offset=100"},
             {
                 "description": "Complex search",
-                "url": "/api/v1/products/search?query=luxury&vendors=CHANEL&price_min=200&has_description=true&sort_by=gross_amount_exc_tax_product&sort_order=desc&limit=10"
-            }
+                "url": "/api/v1/products/search?query=luxury&vendors=CHANEL&price_min=200&has_description=true&sort_by=gross_amount_exc_tax_product&sort_order=desc&limit=10",
+            },
         ]
     }

@@ -12,7 +12,7 @@ app = FastAPI(
     description="API pour la recherche de produits dans le catalogue The Bradery",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Configure CORS
@@ -31,18 +31,10 @@ app.include_router(router)
 @app.get("/", tags=["Root"])
 async def root():
     """API root endpoint."""
-    return {
-        "message": "The Bradery Product Search API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+    return {"message": "The Bradery Product Search API", "version": "1.0.0", "docs": "/docs"}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        app, 
-        host=config.API_HOST, 
-        port=int(config.API_PORT), 
-        reload=config.IS_LOCAL_ENV
-    )
+
+    uvicorn.run(app, host=config.API_HOST, port=int(config.API_PORT), reload=config.IS_LOCAL_ENV)

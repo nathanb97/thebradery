@@ -3,15 +3,19 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-import sys
 import os
 
-# Add the current directory to Python path for imports
-sys.path.append(os.path.dirname(__file__))
 
 from visualization_data.filters import ProductFilters
 from visualization_data.charts import ProductCharts
-from ai_enrichment import ProductEnricher
+from front_streamlit.ai_enrichment import ProductEnricher
+
+# Import database utilities
+try:
+    from database_utils import load_csv_to_database, get_database_stats, check_database_connection
+    DATABASE_AVAILABLE = True
+except ImportError:
+    DATABASE_AVAILABLE = False
 
 
 @st.cache_data
@@ -81,9 +85,15 @@ def main():
     
     # Sidebar for navigation
     st.sidebar.title("Navigation")
+    
+    # Add database section if available
+    nav_options = ["Vue d'ensemble", "Visualisations détaillées", "Enrichissement IA"]
+    if DATABASE_AVAILABLE:
+        nav_options.append("🗄️ Base de données")
+    
     page = st.sidebar.selectbox(
         "Choisir une section",
-        ["Vue d'ensemble", "Visualisations détaillées", "Enrichissement IA"]
+        nav_options
     )
     
     if page == "Vue d'ensemble":
@@ -92,6 +102,8 @@ def main():
         display_detailed_visualizations_page(df)
     elif page == "Enrichissement IA":
         display_enrichment_page(df)
+    elif page == "🗄️ Base de données":
+        display_database_page(df)
 
 
 def display_overview_page(df: pd.DataFrame):
@@ -175,26 +187,13 @@ def display_enrichment_page(df: pd.DataFrame):
     col1, col2 = st.columns([3, 1])
     with col1:
         st.subheader("Configuration IA")
+        st.info(f"Modèle utilisé: {enricher.model}")
     with col2:
         if enricher.is_ollama_available():
             st.success("🟢 Ollama connecté")
         else:
             st.error("🔴 Ollama non disponible")
             st.info("Lancez Ollama avec: `ollama serve`")
-    
-    # Model selection
-    if enricher.is_ollama_available():
-        available_models = enricher.get_available_models()
-        if available_models:
-            selected_model = st.selectbox(
-                "Modèle IA:",
-                available_models,
-                index=0 if "llama3.1" in str(available_models) else 0,
-                help="Modèle utilisé pour générer les descriptions"
-            )
-            enricher.model = selected_model
-        else:
-            st.warning("Aucun modèle disponible. Téléchargez un modèle avec: `ollama pull llama3.1:8b`")
     
     # Description quality stats
     st.subheader("📊 État des descriptions")
@@ -280,6 +279,174 @@ def display_enrichment_page(df: pd.DataFrame):
         with col2:
             if st.button("🔄 Utiliser les données enrichies pour les visualisations"):
                 st.info("Fonctionnalité à implémenter: synchronisation avec les autres pages")
+    
+    # Export to PostgreSQL section
+    if DATABASE_AVAILABLE:
+        st.divider()
+        st.subheader("🗄️ Export vers PostgreSQL")
+        
+        # Determine which dataset to export
+        export_df = st.session_state.get('enriched_df', df) if 'enriched_df' in st.session_state else df
+        is_enriched = 'enriched_df' in st.session_state
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            if is_enriched:
+                st.info(f"💡 Export des données enrichies ({len(export_df)} produits) vers PostgreSQL")
+            else:
+                st.info(f"💡 Export des données CSV originales ({len(export_df)} produits) vers PostgreSQL")
+            
+            if check_database_connection():
+                st.success("🟢 Connexion PostgreSQL active")
+            else:
+                st.error("🔴 Connexion PostgreSQL échouée")
+        
+        with col2:
+            if st.button(
+                "🚀 Exporter vers DB",
+                type="secondary",
+                help="Charge les données dans PostgreSQL pour l'API de recherche"
+            ):
+                if check_database_connection():
+                    # Save current dataframe to temporary CSV
+                    temp_csv_path = "temp_export.csv"
+                    export_df.to_csv(temp_csv_path, index=False)
+                    
+                    # Load to database
+                    with st.spinner("Export en cours..."):
+                        success, message = load_csv_to_database(temp_csv_path)
+                    
+                    # Clean up temp file
+                    try:
+                        os.remove(temp_csv_path)
+                    except:
+                        pass
+                    
+                    # Show result
+                    if success:
+                        st.success(message)
+                        st.info("✅ L'API de recherche peut maintenant être utilisée")
+                    else:
+                        st.error(message)
+                else:
+                    st.error("❌ Impossible de se connecter à PostgreSQL")
+
+
+def display_database_page(df: pd.DataFrame):
+    """Display database management interface."""
+    st.header("🗄️ Gestion de la base de données")
+    st.write("Chargez vos données CSV enrichies dans PostgreSQL pour alimenter l'API de recherche")
+    
+    if not DATABASE_AVAILABLE:
+        st.error("⚠️ Module de base de données non disponible")
+        st.info("Assurez-vous que les dépendances SQLAlchemy et psycopg2-binary sont installées")
+        return
+    
+    # Database connection status
+    st.subheader("🔌 Statut de connexion")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        if check_database_connection():
+            st.success("🟢 Connexion PostgreSQL active")
+        else:
+            st.error("🔴 Connexion PostgreSQL échouée")
+            st.info("Vérifiez la configuration de DATABASE_URL dans les variables d'environnement")
+    
+    with col2:
+        if st.button("🔄 Tester connexion"):
+            if check_database_connection():
+                st.success("✅ Test réussi")
+            else:
+                st.error("❌ Test échoué")
+    
+    # Database statistics
+    if check_database_connection():
+        st.subheader("📊 Statistiques de la base")
+        db_stats = get_database_stats()
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Produits totaux", db_stats["total_products"])
+        with col2:
+            st.metric("Marques", db_stats["vendors_count"])
+        with col3:
+            st.metric("Types", db_stats["types_count"])
+        with col4:
+            st.metric("Avec description", db_stats["with_description"])
+    
+    # CSV to Database loading
+    st.subheader("📤 Chargement des données")
+    
+    st.info("💡 Cette action va charger les données CSV actuelles (enrichies) dans PostgreSQL")
+    
+    if df is not None and len(df) > 0:
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            st.write(f"**Données à charger:** {len(df)} produits")
+            
+            # Show sample
+            with st.expander("👀 Aperçu des données"):
+                st.dataframe(df.head())
+        
+        with col2:
+            if st.button(
+                "🚀 Charger en base",
+                type="primary",
+                help="Charge les données CSV dans PostgreSQL (écrase les données existantes)"
+            ):
+                if check_database_connection():
+                    # Save current dataframe to temporary CSV
+                    temp_csv_path = "temp_products.csv"
+                    df.to_csv(temp_csv_path, index=False)
+                    
+                    # Load to database
+                    with st.spinner("Chargement en cours..."):
+                        success, message = load_csv_to_database(temp_csv_path)
+                    
+                    # Clean up temp file
+                    try:
+                        os.remove(temp_csv_path)
+                    except:
+                        pass
+                    
+                    # Show result
+                    if success:
+                        st.success(message)
+                        st.rerun()  # Refresh to update stats
+                    else:
+                        st.error(message)
+                else:
+                    st.error("❌ Pas de connexion à la base de données")
+    else:
+        st.warning("⚠️ Aucune donnée CSV chargée pour le transfert")
+    
+    # API Information
+    st.subheader("🔌 API de recherche")
+    st.info(
+        "Une fois les données chargées en base, l'API FastAPI peut être utilisée "
+        "pour effectuer des recherches avancées sur le catalogue produits."
+    )
+    
+    # Instructions
+    with st.expander("📝 Instructions API"):
+        st.markdown("""
+        **Pour démarrer l'API:**
+        ```bash
+        # Depuis le répertoire du projet
+        cd api
+        uvicorn main:app --reload --port 8000
+        ```
+        
+        **Endpoints disponibles:**
+        - `GET /api/v1/products/search` - Recherche de produits
+        - `GET /api/v1/products/{id}` - Produit par ID
+        - `GET /api/v1/vendors` - Liste des marques
+        - `GET /api/v1/product-types` - Liste des types
+        
+        **Documentation interactive:** http://localhost:8000/docs
+        """)
 
 
 if __name__ == "__main__":

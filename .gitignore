@@ -2,3 +2,5 @@ Data
 Claude.md
 the_bradery_env
 *.ipynb
+enrich_csv.py
+__pycache__

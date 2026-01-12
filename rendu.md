@@ -20,3 +20,5 @@ Elastic search pour la base de donnée
 Evaluer le modele
 
 Pour la database flyway
+
+rajouter les logs

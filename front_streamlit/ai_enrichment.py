@@ -247,7 +247,7 @@ class ProductEnricher:
         error_count = 0
         
         for idx, (row_idx, product) in enumerate(products_to_enrich.iterrows()):
-            if idx == 5:
+            if idx == 3:
                 break
             # Update progress
             progress = (idx + 1) / len(products_to_enrich)
@@ -322,9 +322,6 @@ if __name__ == "__main__":
         'description': float('nan')
     }
     
-    print("Test d'enrichissement IA")
-    print(f"Produit: {product_data['vendor']} - {product_data['product_type']}")
-    
     # Initialiser l'enrichisseur
     enricher = ProductEnricher()
     
@@ -332,6 +329,6 @@ if __name__ == "__main__":
     result = enricher.enrich_single_description(product_data)
     
     if result:
-        print(f"\nDescription générée:\n{result}")
+        pass  # Test successful
     else:
-        print("\nÉchec de la génération")
+        pass  # Test failed

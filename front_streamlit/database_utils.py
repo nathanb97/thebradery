@@ -97,13 +97,11 @@ def load_csv_to_database(csv_path: str) -> tuple[bool, str]:
                     db.bulk_save_objects(products)
                     db.commit()
                     products.clear()
-                    print(f"✅ Batch {idx//BATCH_SIZE + 1}: {products_added}/{total_products} produits traités")
             
             # Commit le dernier batch s'il reste des produits
             if products:
                 db.bulk_save_objects(products)
                 db.commit()
-                print(f"✅ Final batch: {products_added}/{total_products} produits traités")
             
             return True, f"✅ Successfully loaded {products_added} products into database"
             

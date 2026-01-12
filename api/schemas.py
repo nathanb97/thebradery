@@ -9,11 +9,12 @@ class ProductBase(BaseModel):
     product_id: int
     product_type: Optional[str] = None
     product_tags: Optional[str] = None
-    images_array: Optional[str] = None
+    images_array: Optional[List[str]] = None
     vendor: Optional[str] = None
     inventory_quantity: Optional[int] = None
     gross_amount_exc_tax_product: Optional[float] = None
     description: Optional[str] = None
+    is_generated_description: Optional[bool] = None
 
 
 class ProductResponse(ProductBase):

@@ -1,0 +1,24 @@
+# Dockerfile pour l'initialisation de la base de données
+# Utiliser une image de base Python
+FROM python:3.11-slim-bookworm
+
+# Installer les dépendances système nécessaires pour PostgreSQL
+RUN apt-get update && \
+    apt-get install -y \
+    libpq-dev \
+    gcc \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier le projet
+COPY . /app
+WORKDIR /app
+
+# Installer les dépendances Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Variables d'environnement pour la base de données
+ENV PYTHONPATH=/app
+
+# Lancer l'initialisation de la base de données
+CMD ["python", "-m", "database.init"]

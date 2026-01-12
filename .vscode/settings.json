@@ -1,6 +1,4 @@
 {
-    "python.defaultInterpreter": "./the_bradery_env/bin/python",
-    "python.pythonPath": "./the_bradery_env/bin/python",
     "python.terminal.activateEnvironment": true,
     "python.analysis.extraPaths": [
         "./front_streamlit",
@@ -10,9 +8,6 @@
     "files.associations": {
         "*.py": "python"
     },
-    "python.linting.enabled": true,
-    "python.linting.flake8Enabled": true,
-    "python.formatting.provider": "black",
     "python.testing.pytestEnabled": true,
     "python.testing.pytestArgs": [
         "."

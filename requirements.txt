@@ -5,3 +5,5 @@ uvicorn
 pydantic
 plotly
 requests
+sqlalchemy
+psycopg2-binary

@@ -6,20 +6,20 @@ import pandas as pd
 import streamlit as st
 from typing import Optional, Dict, Any
 import time
+import config
 
 
 class ProductEnricher:
     """Handles AI-powered product description enrichment using Ollama."""
     
-    def __init__(self, base_url: str = "http://localhost:11434"):
+    def __init__(self, base_url: str = None):
         """Initialize the enricher with Ollama configuration.
         
         Args:
-            base_url: Ollama server URL
+            base_url: Ollama server URL (defaults to config)
         """
-        self.base_url = base_url
-        self.model = "llama3.2"  # Default model
-        self.model = "mistral:7b-instruct-v0.3-q4_1"  # Default model
+        self.base_url = base_url or config.OLLAMA_BASE_URL
+        self.model = config.OLLAMA_MODEL
         
     def is_ollama_available(self) -> bool:
         """Check if Ollama server is running and accessible.
@@ -78,7 +78,7 @@ class ProductEnricher:
         - Ton persuasif et élégant
         - Intègre la marque :{vendor}
         - Pour le product_type : {product_type} ainsi que les tags :{tags}, traduis les en francais pour pouvoir les exploiter
-        - Utilses le product_type : {product_type} ainsi que les tags :{tags} que si tu y arrives y comprendre un sens
+        - Utilse le product_type : {product_type} ainsi que les tags :{tags} que si tu y trouves un sens
         - Intègre naturellement les mots-clés: {vendor}, {product_type} ainsi que les {tags}
         - Mets en valeur le positionnement premium si le prix le justifie
         - Tu reponds toujours en français
@@ -225,6 +225,10 @@ class ProductEnricher:
         # Create a copy to avoid modifying original
         enriched_df = df.copy()
         
+        # Ajouter la colonne is_generated_description si elle n'existe pas
+        if 'is_generated_description' not in enriched_df.columns:
+            enriched_df['is_generated_description'] = False
+        
         # Identify products needing enrichment
         products_to_enrich = self.identify_missing_descriptions(df)
         
@@ -243,6 +247,8 @@ class ProductEnricher:
         error_count = 0
         
         for idx, (row_idx, product) in enumerate(products_to_enrich.iterrows()):
+            if idx == 5:
+                break
             # Update progress
             progress = (idx + 1) / len(products_to_enrich)
             progress_bar.progress(progress)
@@ -258,6 +264,7 @@ class ProductEnricher:
             
             if enriched_desc:
                 enriched_df.at[row_idx, 'description'] = enriched_desc
+                enriched_df.at[row_idx, 'is_generated_description'] = True
                 success_count += 1
                 
                 # Show real-time result

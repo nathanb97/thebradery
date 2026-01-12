@@ -14,3 +14,9 @@ si note basse alors :
     faire des notes sur les informations pour savoir si on a des descriptions cohérentes
 Rajouter prompt example
 Donner les photos
+
+Amelioration :
+Elastic search pour la base de donnée
+Evaluer le modele
+
+Pour la database flyway

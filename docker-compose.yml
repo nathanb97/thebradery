@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: thebradery_postgres
+    environment:
+      POSTGRES_DB: thebradery_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d thebradery_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Initialisation de la base de données  
+  db_init:
+    build:
+      context: .
+      dockerfile: database/Dockerfile.init
+    container_name: thebradery_db_init
+    env_file:
+      - .env.docker
+    environment:
+      PYTHONPATH: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    restart: "no"  # Ne redémarre pas automatiquement après l'init
+
+  # API FastAPI
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: thebradery_api
+    env_file:
+      - .env.docker
+    environment:
+      PYTHONPATH: /app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Streamlit
+  streamlit:
+    build:
+      context: .
+      dockerfile: front_streamlit/Dockerfile
+    container_name: thebradery_streamlit
+    env_file:
+      - .env.docker
+    environment:
+      PYTHONPATH: /app
+    ports:
+      - "8501:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:

@@ -1,0 +1,45 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current File (venv)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/the_bradery_env/bin/python",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/front_streamlit"
+      }
+    },
+    {
+      "name": "Python: AI Enrichment Test (venv)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/front_streamlit/ai_enrichment.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/the_bradery_env/bin/python",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/front_streamlit"
+      }
+    },
+    {
+      "name": "Streamlit App (venv)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "streamlit",
+      "args": [
+        "run",
+        "${workspaceFolder}/front_streamlit/app.py"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/the_bradery_env/bin/python",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/front_streamlit"
+      }
+    }
+  ]
+}

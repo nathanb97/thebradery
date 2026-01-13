@@ -30,6 +30,9 @@ class EnvironmentVariables(Enum):
     
     # Session/Security
     SESSIONMIDDLESECRET: str | None = "SESSIONMIDDLESECRET"
+    
+    # Streamlit API configuration
+    STREAMLIT_API_URL = "STREAMLIT_API_URL"
 
     def get(self: EnvironmentVariables, default: str | None = None) -> str:
         return os.environ.get(self.name, default)
@@ -49,6 +52,7 @@ API_PORT = None
 OLLAMA_BASE_URL = None
 OLLAMA_MODEL = None
 SESSIONMIDDLESECRET = None
+STREAMLIT_API_URL = None
 
 # Valeurs par défaut pour The Bradery
 default_values = {
@@ -64,7 +68,8 @@ default_values = {
     "API_PORT": "8000",
     "OLLAMA_BASE_URL": "http://localhost:11434",
     "OLLAMA_MODEL": "mistral:7b-instruct-v0.3-q4_1",
-    "SESSIONMIDDLESECRET": "thebradery_secret_key_change_in_production"
+    "SESSIONMIDDLESECRET": "thebradery_secret_key_change_in_production",
+    "STREAMLIT_API_URL": "http://localhost:8000"
 }
 
 # Initialisation des variables en utilisant le dictionnaire
@@ -101,10 +106,22 @@ def is_local_environment() -> bool:
     return IS_LOCAL.lower() in ('true', '1', 'yes', 'local')
 
 
+def get_api_base_url() -> str:
+    """Get API base URL based on environment (Docker vs local)."""
+    # Detect if running in Docker environment
+    if os.path.exists('/.dockerenv') or os.environ.get('DOCKER_ENV') == 'true' or not is_local_environment():
+        # In Docker, use service name from docker-compose.yml
+        return "http://api:8000"
+    else:
+        # Use configured URL (default: localhost for local development)
+        return STREAMLIT_API_URL
+
+
 # Export computed values
 COMPUTED_DATABASE_URL = build_database_url()
 CORS_ORIGINS_LIST = get_cors_origins_list()
 IS_LOCAL_ENV = is_local_environment()
+API_BASE_URL = get_api_base_url()
 
 # Print configuration for debugging (only in local)
 if IS_LOCAL_ENV:
@@ -114,4 +131,5 @@ if IS_LOCAL_ENV:
     print(f"   OLLAMA_MODEL: {OLLAMA_MODEL}")
     print(f"   CORS_ORIGINS: {CORS_ORIGINS_LIST}")
     print(f"   IS_LOCAL: {IS_LOCAL_ENV}")
+    print(f"   API_BASE_URL: {API_BASE_URL}")
 

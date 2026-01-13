@@ -8,10 +8,13 @@ and health checks.
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from .dependencies import get_db
-from .schemas import ProductResponse, SearchRequest, SearchResponse, VendorResponse, ProductTypeResponse
-from .services import search_products, get_product_by_id, get_vendors, get_product_types, get_catalog_stats
+from .schemas import (ProductResponse, SearchRequest, SearchResponse, VendorResponse, ProductTypeResponse,
+                     EnrichedProductsRequest, EnrichedProductsResponse, EnrichedProductResponse)
+from .services import (search_products, get_product_by_id, get_vendors, get_product_types, 
+                      get_catalog_stats, get_enriched_products)
 
 router = APIRouter()
 
@@ -33,7 +36,7 @@ async def health_check(db: Session = Depends(get_db)):
     """
     try:
         # Test database connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database connection failed: {str(e)}")
@@ -128,6 +131,73 @@ async def search_products_endpoint(
         raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
 
 
+@router.get("/api/v1/products/bonus", response_model=EnrichedProductsResponse, tags=["Products"])
+async def get_enriched_products_bonus(
+    has_photos: Optional[bool] = Query(None, description="Filter products with/without photos"),
+    min_quality_score: Optional[float] = Query(None, ge=0, le=1, description="Minimum quality score"),
+    vendors: Optional[List[str]] = Query(None, description="Filter by vendor names"),
+    product_types: Optional[List[str]] = Query(None, description="Filter by product types"),
+    enrichment_model: Optional[str] = Query(None, description="Filter by AI model used"),
+    sort_by: str = Query("product_id", description="Sort field"),
+    sort_order: str = Query("desc", description="Sort order (asc/desc)"),
+    limit: int = Query(20, ge=1, le=100, description="Results per page"),
+    offset: int = Query(0, ge=0, description="Results to skip"),
+    db: Session = Depends(get_db),
+):
+    """Get enriched products with photos and quality comparison.
+
+    Retrieves products that have been enriched with AI-generated descriptions,
+    including their parsed image URLs for photo comparison with descriptions.
+    This endpoint is perfect for quality assessment and visual validation.
+
+    Args:
+        has_photos (Optional[bool]): Filter for products with/without photos.
+        min_quality_score (Optional[float]): Minimum quality score filter (0-1).
+        vendors (Optional[List[str]]): List of vendor names to filter by.
+        product_types (Optional[List[str]]): List of product types to filter by.
+        enrichment_model (Optional[str]): Filter by AI model used for enrichment.
+        sort_by (str): Field to sort results by. Default: 'product_id'.
+        sort_order (str): Sort order, either 'asc' or 'desc'. Default: 'desc'.
+        limit (int): Number of results per page (1-100). Default: 20.
+        offset (int): Number of results to skip for pagination. Default: 0.
+        db (Session): Database session dependency.
+
+    Returns:
+        EnrichedProductsResponse: Enriched products with photos, pagination, and stats.
+
+    Raises:
+        HTTPException: 500 if error occurs while retrieving enriched products.
+    """
+    try:
+        # Create request object
+        request = EnrichedProductsRequest(
+            has_photos=has_photos,
+            min_quality_score=min_quality_score,
+            vendors=vendors,
+            product_types=product_types,
+            enrichment_model=enrichment_model,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset,
+        )
+
+        # Execute search
+        products, page_info, enrichment_stats = get_enriched_products(db, request)
+
+        # Convert to response format
+        product_responses = [EnrichedProductResponse.model_validate(product) for product in products]
+
+        return EnrichedProductsResponse(
+            products=product_responses,
+            page_info=page_info,
+            enrichment_stats=enrichment_stats
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving enriched products: {str(e)}")
+
+
 @router.get("/api/v1/products/{product_id}", response_model=ProductResponse, tags=["Products"])
 async def get_product(product_id: int, db: Session = Depends(get_db)):
     """Get a product by ID.
@@ -205,6 +275,73 @@ async def get_product_types_endpoint(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error retrieving product types: {str(e)}")
 
 
+@router.get("/api/v1/products/enriched", response_model=EnrichedProductsResponse, tags=["Products"])
+async def get_enriched_products_endpoint(
+    has_photos: Optional[bool] = Query(None, description="Filter products with/without photos"),
+    min_quality_score: Optional[float] = Query(None, ge=0, le=1, description="Minimum quality score"),
+    vendors: Optional[List[str]] = Query(None, description="Filter by vendor names"),
+    product_types: Optional[List[str]] = Query(None, description="Filter by product types"),
+    enrichment_model: Optional[str] = Query(None, description="Filter by AI model used"),
+    sort_by: str = Query("product_id", description="Sort field"),
+    sort_order: str = Query("desc", description="Sort order (asc/desc)"),
+    limit: int = Query(20, ge=1, le=100, description="Results per page"),
+    offset: int = Query(0, ge=0, description="Results to skip"),
+    db: Session = Depends(get_db),
+):
+    """Get enriched products with photos and quality comparison.
+
+    Retrieves products that have been enriched with AI-generated descriptions,
+    including their parsed image URLs for photo comparison with descriptions.
+    This endpoint is perfect for quality assessment and visual validation.
+
+    Args:
+        has_photos (Optional[bool]): Filter for products with/without photos.
+        min_quality_score (Optional[float]): Minimum quality score filter (0-1).
+        vendors (Optional[List[str]]): List of vendor names to filter by.
+        product_types (Optional[List[str]]): List of product types to filter by.
+        enrichment_model (Optional[str]): Filter by AI model used for enrichment.
+        sort_by (str): Field to sort results by. Default: 'product_id'.
+        sort_order (str): Sort order, either 'asc' or 'desc'. Default: 'desc'.
+        limit (int): Number of results per page (1-100). Default: 20.
+        offset (int): Number of results to skip for pagination. Default: 0.
+        db (Session): Database session dependency.
+
+    Returns:
+        EnrichedProductsResponse: Enriched products with photos, pagination, and stats.
+
+    Raises:
+        HTTPException: 500 if error occurs while retrieving enriched products.
+    """
+    try:
+        # Create request object
+        request = EnrichedProductsRequest(
+            has_photos=has_photos,
+            min_quality_score=min_quality_score,
+            vendors=vendors,
+            product_types=product_types,
+            enrichment_model=enrichment_model,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset,
+        )
+
+        # Execute search
+        products, page_info, enrichment_stats = get_enriched_products(db, request)
+
+        # Convert to response format
+        product_responses = [EnrichedProductResponse.model_validate(product) for product in products]
+
+        return EnrichedProductsResponse(
+            products=product_responses,
+            page_info=page_info,
+            enrichment_stats=enrichment_stats
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving enriched products: {str(e)}")
+
+
 @router.get("/api/v1/examples/search", tags=["Examples"])
 async def search_examples():
     """Examples of search queries.
@@ -230,6 +367,14 @@ async def search_examples():
                 "description": "Complex search",
                 "url": "/api/v1/products/search?query=luxury&vendors=CHANEL&price_min=200&"
                        "has_description=true&sort_by=gross_amount_exc_tax_product&sort_order=desc&limit=10",
+            },
+            {
+                "description": "Enriched products with photos",
+                "url": "/api/v1/products/enriched?has_photos=true&limit=10",
+            },
+            {
+                "description": "High quality enriched products",
+                "url": "/api/v1/products/enriched?min_quality_score=0.8&vendors=CHANEL",
             },
         ]
     }

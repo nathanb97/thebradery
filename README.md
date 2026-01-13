@@ -36,11 +36,67 @@ docker-compose ps
 
 - **Interface Streamlit** : http://localhost:8501
   - Dashboard d'enrichissement des produits
+  - Voir section "🖥️ Utilisation de l'interface Streamlit" ci-dessous
 
 - **Base de données PostgreSQL** : localhost:5432
   - Base : `thebradery_db`
   - Utilisateur : `user` 
   - Mot de passe : `password`
+
+## 🖥️ Utilisation de l'interface Streamlit
+
+### Étape obligatoire : Chargement du fichier CSV
+
+**⚠️ IMPORTANT** : Avant toute utilisation, vous **DEVEZ** charger un fichier CSV de produits. Sans cela, aucune fonctionnalité ne sera accessible.
+
+1. Accédez à l'interface : http://localhost:8501
+2. Dans la section "📁 Chargement des données", cliquez sur "Choisir un fichier CSV de produits"
+3. Sélectionnez votre fichier CSV contenant les colonnes requises :
+   - `product_id`, `product_type`, `product_tags`, `images_array`
+   - `vendor`, `inventory_quantity`, `gross_amount_exc_tax_product`, `description`
+4. Une fois chargé avec succès, la section "Navigation" apparaîtra
+
+### Navigation dans l'interface
+
+**⚠️ Attention** : Ne cliquez PAS sur les onglets qui peuvent apparaître en haut de la page. Utilisez uniquement la liste déroulante "Navigation" dans la sidebar à gauche.
+
+#### Sections disponibles :
+
+1. **🏠 Vue d'ensemble**
+   - Métriques globales du catalogue
+   - Analyse de qualité des descriptions
+   - Filtrage et visualisation des produits
+
+2. **📊 Visualisations détaillées** 
+   - Graphiques avancés (scatter plot interactif)
+   - Distribution des marques et types de produits
+   - Analyses de stock et prix
+
+3. **🤖 Enrichissement IA**
+   - Interface pour enrichir automatiquement les descriptions
+   - **⚠️ LIMITATION** : Cette section nécessite Ollama avec le modèle Mistral 7B
+   - Si Ollama n'est pas installé, la section affichera un état "non disponible"
+   - Export des données vers PostgreSQL
+
+4. **🔍 API Explorer**
+   - Test des endpoints de l'API FastAPI
+   - Recherche de produits via l'API
+   - Interface pour tester le nouveau endpoint bonus `/products/bonus`
+
+5. **🗄️ Base de données** (si disponible)
+   - Gestion de la base PostgreSQL
+   - Chargement des données en base
+   - Statistiques de la base de données
+
+### Note sur l'enrichissement IA
+
+L'enrichissement automatique des descriptions nécessite :
+- **Ollama** installé localement
+- **Modèle Mistral 7B** téléchargé (`ollama pull mistral:7b-instruct-v0.3-q4_1`)
+
+Cette fonctionnalité n'a volontairement pas été incluse dans Docker pour éviter de télécharger un modèle de plusieurs gigaoctets. Si vous n'avez pas Ollama, les autres fonctionnalités restent pleinement opérationnelles.
+
+
 
 ## 📁 Architecture du projet
 

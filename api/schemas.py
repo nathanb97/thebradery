@@ -145,3 +145,72 @@ class ProductTypeResponse(BaseModel):
 
     product_type: str
     product_count: int
+
+
+class EnrichedProductResponse(ProductBase):
+    """Enriched product response schema with photos and quality comparison.
+    
+    Extends ProductBase with additional information for enriched products,
+    including comparison between original and generated descriptions,
+    and parsed image data for easy display.
+    
+    Attributes:
+        original_description (Optional[str]): Original product description before enrichment.
+        enriched_description (Optional[str]): AI-generated enriched description.
+        images_parsed (Optional[List[str]]): Parsed list of image URLs for display.
+        enrichment_date (Optional[str]): ISO timestamp of when enrichment occurred.
+        enrichment_model (Optional[str]): AI model used for enrichment (e.g., "llama3.2").
+        quality_score (Optional[float]): Quality assessment score (0-1).
+        has_photos (bool): Whether the product has associated photos.
+    """
+    
+    original_description: Optional[str] = Field(None, description="Original description before enrichment")
+    enriched_description: Optional[str] = Field(None, description="AI-generated enriched description") 
+    images_parsed: Optional[List[str]] = Field(None, description="List of image URLs parsed from images_array")
+    enrichment_date: Optional[str] = Field(None, description="ISO timestamp of enrichment")
+    enrichment_model: Optional[str] = Field(None, description="AI model used (e.g., llama3.2)")
+    quality_score: Optional[float] = Field(None, ge=0, le=1, description="Quality score (0-1)")
+    has_photos: bool = Field(..., description="Whether product has photos")
+
+    class Config:
+        from_attributes = True
+
+
+class EnrichedProductsRequest(BaseModel):
+    """Request schema for enriched products endpoint.
+    
+    Attributes:
+        has_photos (Optional[bool]): Filter for products with/without photos.
+        min_quality_score (Optional[float]): Minimum quality score filter.
+        vendors (Optional[List[str]]): Filter by specific vendors.
+        product_types (Optional[List[str]]): Filter by specific product types.
+        enrichment_model (Optional[str]): Filter by AI model used.
+        sort_by (str): Field to sort results by.
+        sort_order (str): Sort order (asc/desc).
+        limit (int): Number of results per page.
+        offset (int): Number of results to skip.
+    """
+    
+    has_photos: Optional[bool] = Field(None, description="Filter products with/without photos")
+    min_quality_score: Optional[float] = Field(None, ge=0, le=1, description="Minimum quality score")
+    vendors: Optional[List[str]] = Field(None, description="Filter by vendor names")
+    product_types: Optional[List[str]] = Field(None, description="Filter by product types")
+    enrichment_model: Optional[str] = Field(None, description="Filter by AI model used")
+    sort_by: str = Field("product_id", description="Sort field")
+    sort_order: str = Field("desc", description="Sort order (asc/desc)")
+    limit: int = Field(20, ge=1, le=100, description="Results per page")
+    offset: int = Field(0, ge=0, description="Results to skip")
+
+
+class EnrichedProductsResponse(BaseModel):
+    """Response schema for enriched products endpoint.
+    
+    Attributes:
+        products (List[EnrichedProductResponse]): List of enriched products.
+        page_info (PageInfo): Pagination information.
+        enrichment_stats (dict): Statistics about enriched products.
+    """
+    
+    products: List[EnrichedProductResponse]
+    page_info: PageInfo
+    enrichment_stats: dict = Field(..., description="Enrichment statistics and metadata")

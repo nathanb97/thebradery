@@ -8,6 +8,7 @@ and health checks.
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from .dependencies import get_db
 from .schemas import (ProductResponse, SearchRequest, SearchResponse, VendorResponse, ProductTypeResponse,
@@ -35,7 +36,7 @@ async def health_check(db: Session = Depends(get_db)):
     """
     try:
         # Test database connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database connection failed: {str(e)}")
